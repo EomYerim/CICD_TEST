@@ -25,7 +25,7 @@ jobs:
     - name: Trigger AWS CodeDeploy
       run: |
         aws deploy create-deployment \
-          --application-name dev-bastion-server \
+          --application-name test_cicd \
           --deployment-group-name test-cicd-deploygroup \
           --deployment-config-name CodeDeployDefault.OneAtATime \
           --github-location repository=${{ github.repository }},commitId=${{ github.sha }}
