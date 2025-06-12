@@ -1,3 +1,3 @@
 #!/bin/bash
-echo "Stopping existing app (if running)..."
-sudo pkill -f streamlit || true
+echo "[BeforeInstall] 디렉토리 생성"
+mkdir -p /home/ubuntu/app

@@ -1,4 +1,5 @@
 #!/bin/bash
-echo "Installing dependencies..."
-cd /home/ubuntu/app
-pip3 install -r requirements.txt
+echo "[AfterInstall] Java 설치 시작"
+sudo apt update
+sudo apt install -y default-jdk
+java -version

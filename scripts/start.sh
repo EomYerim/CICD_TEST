@@ -1,4 +1,3 @@
 #!/bin/bash
-echo "Starting Streamlit app..."
-cd /home/ubuntu/app
-nohup streamlit run app.py --server.port 8501 > streamlit.log 2>&1 &
+echo "[ApplicationStart] 자바 설치 테스트 완료"
+echo "배포 테스트 종료"
