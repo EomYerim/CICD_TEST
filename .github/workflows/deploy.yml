@@ -32,6 +32,6 @@ jobs:
       run: |
         aws deploy create-deployment \
           --application-name test_cicd \
-          --deployment-group-name test_cicd_deploygroup \
+          --deployment-group-name test-cicd-deploygroup \
           --s3-location bucket=ttasup-dev-bucket,key=deploy/deploy.zip,bundleType=zip \
           --file-exists-behavior OVERWRITE
