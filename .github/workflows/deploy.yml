@@ -11,27 +11,39 @@ jobs:
 
     steps:
     - name: Checkout source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4 # 최신 버전으로 업데이트 (v3 -> v4)
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4 # 최신 버전 사용
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+        aws-region: ap-northeast-2
 
     - name: Zip application
       run: |
         zip -r deploy.zip app.py appspec.yml scripts/
 
     - name: Upload to S3
-      uses: aws-actions/aws-s3@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
-        region: ap-northeast-2
-        bucket: ttasup-dev-bucket
-        source: deploy.zip
-        destination: deploy/deploy.zip
+      run: |
+        aws s3 cp deploy.zip s3://ttasup-dev-bucket/deploy/deploy.zip
+      env:
+        AWS_REGION: ap-northeast-2
+        # aws-actions/configure-aws-credentials 덕분에 별도의 AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY 환경변수 설정 불필요
 
     - name: Deploy with CodeDeploy
-      uses: aws-actions/aws-codedeploy@v0.3.1
+      uses: aws-actions/aws-codedeploy@v1 # 최신 버전으로 업데이트 (v0.3.1 -> v1)
       with:
         application-name: test_cicd
-        deployment-group: test-cicd-deploygroup
-        deployment-bucket: ttasup-dev-bucket
-        deployment-key: deploy/deploy.zip
-        region: ap-northeast-2
+        deployment-group: test-cicd-deploygroup # 이 부분도 채워야 합니다.
+        # deployment-bucket과 deployment-key는 aws-actions/aws-codedeploy@v1에서 직접 사용되지 않습니다.
+        # 대신, application-name과 deployment-group을 통해 S3에서 배포 번들을 가져옵니다.
+        # S3 경로를 CodeDeploy 애플리케이션의 리비전으로 등록해야 합니다.
+        file-exists-behavior: OVERWRITE # (선택 사항) 배포 시 파일이 이미 존재할 경우 처리 방식
+        wait-for-deployment: true # (선택 사항) 배포 완료를 기다릴지 여부
+        # S3 Object Key와 Bucket은 CodeDeploy 서비스가 직접 사용합니다.
+        # 이 액션은 S3에 있는 파일을 CodeDeploy 배포로 시작하는 역할을 합니다.
+        s3-location: 
+          bucket: ttasup-dev-bucket # S3 버킷 이름
+          key: deploy/deploy.zip # S3 객체 키
+          bundleType: zip # 번들 타입
