@@ -13,6 +13,12 @@
 
 #!/bin/bash
 echo "[AfterInstall] Python 설치 및 패키지 설치"
-sudo apt update -y
-sudo apt install -y python3-pip
+
+apt update -y
+apt install -y python3-pip
+
 pip3 install flask
+
+# 디버깅용 로그 출력
+which pip3
+pip3 --version
