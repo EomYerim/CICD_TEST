@@ -27,14 +27,11 @@ jobs:
     - name: Upload to S3
       run: |
         aws s3 cp deploy.zip s3://ttasup-dev-bucket/deploy/deploy.zip
-      env:
-        AWS_REGION: ap-northeast-2
 
     - name: Deploy with CodeDeploy
-      uses: aws-actions/aws-codedeploy@v1
-      with:
-        application-name: test_cicd
-        deployment-group: test_cicd_deploygroup
-        file-exists-behavior: OVERWRITE
-        wait-for-deployment: true
-        s3-location: bucket=ttasup-dev-bucket,key=deploy/deploy.zip,bundleType=zip
+      run: |
+        aws deploy create-deployment \
+          --application-name test_cicd \
+          --deployment-group-name test_cicd_deploygroup \
+          --s3-location bucket=ttasup-dev-bucket,key=deploy/deploy.zip,bundleType=zip \
+          --file-exists-behavior OVERWRITE
