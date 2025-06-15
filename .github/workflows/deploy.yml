@@ -2,38 +2,36 @@ name: Deploy to EC2 with CodeDeploy
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout source
       uses: actions/checkout@v3
 
-    - name: Zip project
-      run: zip -r deploy.zip ./*
+    - name: Zip application
+      run: |
+        zip -r deploy.zip app.py appspec.yml scripts/
 
     - name: Upload to S3
-      uses: jakejarvis/s3-sync-action@master
+      uses: aws-actions/aws-s3@v1
       with:
-        args: --acl private
-      env:
-        AWS_S3_BUCKET: ttasup-dev-bucket
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
-        AWS_REGION: ap-northeast-2
-        SOURCE_DIR: './'
-        DEST_DIR: 'code-deploy/deploy.zip'
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+        region: ap-northeast-2
+        bucket: ttasup-dev-bucket
+        source: deploy.zip
+        destination: deploy/deploy.zip
 
     - name: Deploy with CodeDeploy
-      uses: webfactory/create-aws-codedeploy-deployment@v1
+      uses: aws-actions/aws-codedeploy@v0.3.1
       with:
         application-name: test_cicd
         deployment-group: test-cicd-deploygroup
         deployment-bucket: ttasup-dev-bucket
-        deployment-bundle: code-deploy/deploy.zip
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+        deployment-key: deploy/deploy.zip
         region: ap-northeast-2
