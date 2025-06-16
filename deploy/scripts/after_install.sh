@@ -1,13 +1,7 @@
 #!/bin/bash
 echo "[AfterInstall] 권한 설정 및 기타 작업"
 
-APP_JAR="/home/ubuntu/app/app.jar"
-
-if [ -f "$APP_JAR" ]; then
-  chmod +x "$APP_JAR"
-  chown ubuntu:ubuntu "$APP_JAR"
-  echo "실행 권한 부여 완료"
-else
-  echo "오류: $APP_JAR 파일이 존재하지 않습니다."
-  exit 1
-fi
+# 작업 디렉터리 소유자 및 권한 변경 (ubuntu 사용자가 접근 가능하도록)
+chown ubuntu:ubuntu /home/ubuntu/app -R
+chmod +x /home/ubuntu/app/app.jar
+chmod +x /home/ubuntu/app/*.sh
