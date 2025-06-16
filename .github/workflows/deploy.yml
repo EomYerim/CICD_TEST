@@ -21,35 +21,38 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew clean build -x test
+        working-directory: cicd # gradlew가 'cicd' 디렉토리 안에 있으므로, 여기서 빌드
 
-      - name: Prepare deployment package
+      - name: Prepare deployment package # 배포 패키지 준비
+        # 이 스텝은 리포지토리의 루트 디렉토리에서 실행
+        # 따라서 파일 경로를 'cicd/' 또는 직접적인 이름으로 지정
         run: |
-          mkdir deploy
-          cp build/libs/*.jar deploy/app.jar
-          cp appspec.yml deploy/
-          # Ensure scripts directory exists and is copied correctly.
-          # If scripts/ is empty, mkdir might create it, but cp -r won't copy if it's not there.
-          # Make sure your 'scripts' directory is in the root of your repository.
-          cp -r scripts deploy/ 
-          cd deploy
-          zip -r deploy.zip *
+          mkdir deploy # 루트 디렉토리에 'deploy' 폴더 생성
+          cp cicd/build/libs/*.jar deploy/app.jar # 'cicd' 디렉토리 안의 JAR 파일을 복사
+          cp appspec.yml deploy/ # 루트 디렉토리의 appspec.yml을 복사
+          cp -r scripts deploy/ # 루트 디렉토리의 scripts 폴더를 복사
+          cd deploy # 생성된 'deploy' 폴더로 이동
+          zip -r deploy.zip ./* # 현재 디렉토리(deploy)의 모든 내용을 zip으로 압축
+          # 참고: 'zip -r deploy.zip *' 대신 'zip -r deploy.zip ./*'를 사용하면 .으로 시작하는 파일도 포함
+          # (예: .env, .config 등. 필요한 경우 사용, 여기선 ./*가 더 명확)
 
-      - name: Configure AWS Credentials # Added this step for aws CLI commands
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # Use correct secret name
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} # Use correct secret name
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-2
 
       - name: Upload to S3
-        # AWS_REGION is already configured by 'Configure AWS Credentials' step
+        # 'Prepare deployment package' 스텝이 루트에서 'deploy/deploy.zip'을 만들었으므로,
+        # S3 업로드 시 로컬 경로는 'deploy/deploy.zip'
         run: |
           aws s3 cp deploy/deploy.zip s3://${{ secrets.S3_BUCKET_NAME }}/deploy/deploy.zip
 
-      - name: Create CodeDeploy Deployment # Changed to use AWS CLI directly
+      - name: Create CodeDeploy Deployment
         run: |
           aws deploy create-deployment \
             --application-name test_cicd \
             --deployment-group-name test-cicd-deploygroup \
             --s3-location bucket=${{ secrets.S3_BUCKET_NAME }},key=deploy/deploy.zip,bundleType=zip \
-            --file-exists-behavior OVERWRITE # Optional: Handles existing files on the instance
+            --file-exists-behavior OVERWRITE
