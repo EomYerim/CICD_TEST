@@ -31,6 +31,9 @@ jobs:
           rm -rf codedeploy_artifact
           rm -f deploy.zip
 
+      - name: Make scripts executable
+        run: chmod +x deploy/scripts/*.sh
+
       - name: Prepare deployment package
         run: |
           mkdir codedeploy_artifact
