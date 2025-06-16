@@ -27,23 +27,29 @@ jobs:
           mkdir deploy
           cp build/libs/*.jar deploy/app.jar
           cp appspec.yml deploy/
-          cp -r scripts deploy/
+          # Ensure scripts directory exists and is copied correctly.
+          # If scripts/ is empty, mkdir might create it, but cp -r won't copy if it's not there.
+          # Make sure your 'scripts' directory is in the root of your repository.
+          cp -r scripts deploy/ 
           cd deploy
           zip -r deploy.zip *
 
+      - name: Configure AWS Credentials # Added this step for aws CLI commands
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # Use correct secret name
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} # Use correct secret name
+          aws-region: ap-northeast-2
+
       - name: Upload to S3
-        env:
-          AWS_REGION: ap-northeast-2
+        # AWS_REGION is already configured by 'Configure AWS Credentials' step
         run: |
           aws s3 cp deploy/deploy.zip s3://${{ secrets.S3_BUCKET_NAME }}/deploy/deploy.zip
 
-      - name: Deploy with CodeDeploy
-        uses: aws-actions/aws-codedeploy@v1
-        with:
-            application-name: test_cicd
-            deployment-group: test-cicd-deploygroup
-            wait-for-deployment: true
-            s3-location: |
-              bucket=${{ secrets.S3_BUCKET_NAME }}
-              key=deploy/deploy.zip
-              bundleType=zip
+      - name: Create CodeDeploy Deployment # Changed to use AWS CLI directly
+        run: |
+          aws deploy create-deployment \
+            --application-name test_cicd \
+            --deployment-group-name test-cicd-deploygroup \
+            --s3-location bucket=${{ secrets.S3_BUCKET_NAME }},key=deploy/deploy.zip,bundleType=zip \
+            --file-exists-behavior OVERWRITE # Optional: Handles existing files on the instance
