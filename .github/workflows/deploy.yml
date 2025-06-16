@@ -21,7 +21,10 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew clean build -x test
-        working-directory: cicd # gradlew 파일이 'cicd' 디렉토리 안에 있으므로, 여기서 빌드
+        working-directory: cicd
+
+      - name: Debug built JAR
+        run: ls -alh cicd/build/libs
 
       - name: Clean up old artifact directory
         run: |
@@ -31,7 +34,7 @@ jobs:
       - name: Prepare deployment package
         run: |
           mkdir codedeploy_artifact
-          cp cicd/build/libs/*.jar codedeploy_artifact/app.jar
+          cp cicd/build/libs/cicd-0.0.1-SNAPSHOT.jar codedeploy_artifact/app.jar
           cp appspec.yml codedeploy_artifact/
           cp -r deploy/scripts codedeploy_artifact/
           cd codedeploy_artifact
