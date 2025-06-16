@@ -21,22 +21,26 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew clean build -x test
-        working-directory: cicd # gradlew가 'cicd' 디렉토리 안에 있으므로, 여기서 빌드
+        working-directory: cicd # gradlew 파일이 'cicd' 디렉토리 안에 있으므로, 여기서 빌드합니다.
+
+      - name: Clean up old artifact directory # 임시 폴더와 zip 파일 정리
+        run: |
+          rm -rf codedeploy_artifact # 'codedeploy_artifact' 임시 디렉토리 삭제
+          rm -f deploy.zip # 이전 실행에서 남은 'deploy.zip' 파일 삭제
 
       - name: Prepare deployment package # 배포 패키지 준비
-        # 이 스텝은 리포지토리의 루트 디렉토리에서 실행
-        # 따라서 파일 경로를 'cicd/' 또는 직접적인 이름으로 지정
+        # 이 스텝은 리포지토리의 루트 디렉토리에서 실행됩니다.
         run: |
-          mkdir deploy # 루트 디렉토리에 'deploy' 폴더 생성
-          cp cicd/build/libs/*.jar deploy/app.jar # 'cicd' 디렉토리 안의 JAR 파일을 복사
-          cp appspec.yml deploy/ # 루트 디렉토리의 appspec.yml을 복사
-          cp -r scripts deploy/ # 루트 디렉토리의 scripts 폴더를 복사
-          cd deploy # 생성된 'deploy' 폴더로 이동
-          zip -r deploy.zip ./* # 현재 디렉토리(deploy)의 모든 내용을 zip으로 압축
-          # 참고: 'zip -r deploy.zip *' 대신 'zip -r deploy.zip ./*'를 사용하면 .으로 시작하는 파일도 포함
-          # (예: .env, .config 등. 필요한 경우 사용, 여기선 ./*가 더 명확)
+          mkdir codedeploy_artifact # 'codedeploy_artifact'라는 새 임시 폴더 생성
+          cp cicd/build/libs/*.jar codedeploy_artifact/app.jar # 'cicd' 안의 JAR 파일을 복사
+          cp appspec.yml codedeploy_artifact/ # 루트 디렉토리의 appspec.yml을 복사
+          # Git 저장소의 'deploy/scripts' 폴더를 'codedeploy_artifact' 안으로 복사
+          # 이렇게 하면 최종 ZIP 파일에 'scripts/' 폴더가 루트에 위치
+          cp -r deploy/scripts codedeploy_artifact/
 
-      - name: Configure AWS Credentials
+          cd codedeploy_artifact # 생성된 'codedeploy_artifact' 폴더로 이동
+          # 'codedeploy_artifact' 안의 모든 내용을 상위 폴더(루트)에 'deploy.zip'으로 압축
+          zip -r ../deploy.zip ./* - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -44,10 +48,10 @@ jobs:
           aws-region: ap-northeast-2
 
       - name: Upload to S3
-        # 'Prepare deployment package' 스텝이 루트에서 'deploy/deploy.zip'을 만들었으므로,
-        # S3 업로드 시 로컬 경로는 'deploy/deploy.zip'
+        # 'Prepare deployment package' 스텝이 루트에서 'deploy.zip'을 만들었으므로,
+        # S3 업로드 시 로컬 경로는 'deploy.zip'
         run: |
-          aws s3 cp deploy/deploy.zip s3://${{ secrets.S3_BUCKET_NAME }}/deploy/deploy.zip
+          aws s3 cp deploy.zip s3://${{ secrets.S3_BUCKET_NAME }}/deploy/deploy.zip
 
       - name: Create CodeDeploy Deployment
         run: |
@@ -55,4 +59,4 @@ jobs:
             --application-name test_cicd \
             --deployment-group-name test-cicd-deploygroup \
             --s3-location bucket=${{ secrets.S3_BUCKET_NAME }},key=deploy/deploy.zip,bundleType=zip \
-            --file-exists-behavior OVERWRITE
+            --file-exists-behavior OVERWRITE # (선택 사항) 배포 시 파일이 이미 존재할 경우 처리 방식
